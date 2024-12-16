@@ -55,6 +55,15 @@ def load_json(file_path):
         print(f"Unexpected error while loading {file_path}: {e}")
         return None
 
+def save_json(file_path, data):
+    """Saves JSON data to a file."""
+    try:
+        with open(file_path, 'w', encoding='utf-8') as file:
+            json.dump(data, file, indent=4)
+        print(f"JSON saved to {file_path}")
+    except Exception as e:
+        print(f"Error saving JSON to {file_path}: {e}")
+
 def merge_and_renumber(file1, file2, output_file):
     """Merges two JSON files and renumbers their settings."""
     json1 = load_json(file1)
@@ -83,12 +92,7 @@ def merge_and_renumber(file1, file2, output_file):
     }
 
     # Write the merged JSON to the output file
-    try:
-        with open(output_file, 'w', encoding='utf-8') as file:
-            json.dump(merged_json, file, indent=4)
-        print(f"Merged JSON saved to {output_file}")
-    except Exception as e:
-        print(f"Error saving merged JSON: {e}")
+    save_json(output_file, merged_json)
 
 def merge_all_settings_in_directory(directory, output_file):
     """Merges all JSON files in a directory."""
