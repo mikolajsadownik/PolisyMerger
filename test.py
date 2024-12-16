@@ -1,4 +1,113 @@
 import json
+import os
+
+def convert_to_utf8(directory):
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        try:
+            with open(file_path, 'r', encoding='utf-16', errors='replace') as file:
+                content = file.read()
+            
+            with open(file_path, 'w', encoding='utf-8') as file:
+                file.write(content)
+
+        except Exception as e:
+            print("Failed")
+
+def apply_merged_settings(file_to_update, merged_settings_file):
+    json_to_update = load_json(file_to_update)
+
+    merged_json = load_json(merged_settings_file)
+
+    if not file_to_update or not merged_json:
+        print("Error: One or both files could not be loaded")
+        return
+    
+    merged_settings = merged_json.get("settings", None)
+    
+    if not isinstance(merged_settings, list):
+        print(f"Error 'settings' in {merged_settings_file} is not a list")
+
+    # Updating settings in file
+    json_to_update["settings"] = merged_settings
+    json_to_update["settingCount"] = len(json_to_update["settings"])
+
+    try:
+        with open(file_to_update, 'w', encoding='utf-8') as file:
+            json.dump(json_to_update, file, indent=4)
+        print("Updated Settings")
+    except Exception as e:
+        print(f"Failed to update {file_to_update} : {e}")
+
+def load_json(file_path):
+    """Load JSON data from a file."""
+    if not os.path.exists(file_path):
+        print(f"File{file_path} does not exist.")
+        return None
+    try:
+        with open(file_path,'r',encoding='utf-8') as file:
+            raw_content = file.read()
+            print(f"Raw content of {file_path}:")
+            print(raw_content)
+            data = json.loads(raw_content)
+            print(f"Parsed JSON data from {file_path} : {data}")
+            return data
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON from {file_path} : {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error while loading {file_path} : {e}")
+        return None
+
+def merge_and_renumber(file1,file2,output_file):
+    """Merging settings lists"""
+    # Load JSON files
+    json1 = load_json(file1)
+    json2 = load_json(file2)
+
+    if not json1 or not json2:
+        print("One or both files could not be loaded")
+        return
+    
+    settings1 = json1.get("settings", [])
+    settings2 = json2.get("settings", [])
+
+    if not isinstance(settings1,list) or not isinstance(settings2,list):
+        print("Settings attribute must be a list in both files")
+        return
+    
+    # Merging settings and renumbering "id"
+    merged_settings = settings1 + settings2
+    for index, setting in enumerate(merged_settings):
+        if isinstance(setting, dict):
+            setting["id"] = index
+
+    # Create a new merged JSON object
+    merged_json = {
+        "settings" : merged_settings
+    }
+
+    # Write the merged json to the output file
+    with open(output_file, 'w',encoding='utf-8') as file:
+        json.dump(merged_json, file, indent=4)
+    print(f"Merged JSON saved to {output_file}")
+
+
+
+def merge_all_settings_in_directory(directory, output_file):
+    json_files = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.json')]
+
+    if len(json_files) < 2:
+        print("Need at least two JSON files")
+        return
+    
+    base_file = json_files[0]
+    merged_settings_file = base_file
+
+    for next_file in json_files[1:]:
+        merge_and_renumber(merged_settings_file, next_file, output_file)
+        merged_settings_file = output_file
+
 
 def deduplicate_settings(json_data):
     """
@@ -140,20 +249,32 @@ def save_json(file_path, data):
     except Exception as e:
         print(f"Error saving JSON: {e}")
 
-# Main execution
-if __name__ == "__main__":
-    input_file = "example.json"  # Input file path
-    output_file = "deduplicated_example.json"  # Output file path
+
+""" TO ZMIENIAMY NA PLIK KTÓRY BĘDZIE NASZYM FINALNYM CONFIGIEM """
+file_to_update = "Policies/becmw-confprof-std-bsl-mdm-connectivity-device-v1"
+
+# Converting files to utf-8
+convert_to_utf8("Policies")
+
+policies_directory = "Policies"
+output_file = "Policies/merged.json"
+
+merge_all_settings_in_directory(policies_directory, output_file)
+
+input_file = "Policies\merged.json"  # Input file path
+output_file = "Policies\deduplicated_example.json"  # Output file path
 
     # Load input JSON
-    json_data = load_json(input_file)
+json_data = load_json(input_file)
 
-    if json_data:
-        # Run the deduplication process
-        deduplicate_settings(json_data)
+if json_data:
+    # Run the deduplication process
+    deduplicate_settings(json_data)
 
-        # Renumber IDs and update settingsCount
-        renumber_settings_and_update_count(json_data)
+    # Renumber IDs and update settingsCount
+    renumber_settings_and_update_count(json_data)
 
-        # Save the resulting JSON
-        save_json(output_file, json_data)
+    # Save the resulting JSON
+    save_json(output_file, json_data)
+
+apply_merged_settings(file_to_update, output_file)
