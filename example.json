@@ -1,7 +1,7 @@
 {
     "settings": [
         {
-            "id": 1,
+            "id": 0,
             "settingInstance": {
                 "settingDefinitionId": "device_vendor_1",
                 "choiceSettingValue": {
@@ -27,33 +27,7 @@
             }
         },
         {
-            "id": 2,
-            "settingInstance": {
-                "settingDefinitionId": "device_vendor_1",
-                "choiceSettingValue": {
-                    "value": "choice_2",
-                    "children": [
-                        {
-                            "settingDefinitionId": "child_2",
-                            "groupSettingCollectionValue": [
-                                {
-                                    "children": [
-                                        {
-                                            "settingDefinitionId": "group_child_2",
-                                            "simpleSettingValue": {
-                                                "value": "value_2"
-                                            }
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }
-        },
-        {
-            "id": 3,
+            "id": 1,
             "settingInstance": {
                 "settingDefinitionId": "device_vendor_2",
                 "choiceSettingValue": {
@@ -61,16 +35,7 @@
                     "children": []
                 }
             }
-        },
-        {
-            "id": 4,
-            "settingInstance": {
-                "settingDefinitionId": "device_vendor_2",
-                "choiceSettingValue": {
-                    "value": "choice_4",
-                    "children": []
-                }
-            }
         }
-    ]
+    ],
+    "settingsCount": 2
 }

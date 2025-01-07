@@ -2,6 +2,29 @@ import json
 import os
 import argparse
 
+import sys
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QListWidget, QWidget
+)
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QDragEnterEvent, QDropEvent
+import os
+import json
+
+
+# Your backend functions like `merge_and_renumber`, `load_json`, etc., remain the same.
+
+
+class DragDropList(QListWidget):
+    """Custom QListWidget to handle drag-and-drop."""
+    def __init__(self, parent=None, allow_multiple=True):
+        super().__init__(parent)
+        self.allow_multiple = allow_multiple
+        self.setAcceptDrops(True)
+        self.set
+
+
+
 def convert_to_utf8(directory):
     """Converts all files in a directory to UTF-8 encoding."""
     for filename in os.listdir(directory):
@@ -146,36 +169,155 @@ def update_settings_count(json_data):
     json_data["settingsCount"] = len(json_data.get("settings", []))
     print(f"SettingsCount updated to {json_data['settingsCount']}.")
 
-# Main execution
+
+TEMP_FILE = "temp_merged.json"  # Temporary file for intermediate results
+
+
+class JSONProcessorApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("JSON Processor - Unified Workflow")
+        self.setGeometry(100, 100, 800, 400)
+        self.init_ui()
+
+    def init_ui(self):
+        # Create the main layout
+        layout = QVBoxLayout()
+
+        # Folder and File Selection Layout
+        selection_layout = QHBoxLayout()
+
+        # Left: Folder selection for processing
+        left_layout = QVBoxLayout()
+
+        left_header = QLabel("LEFT: Folder Selection for Processing")
+        left_header.setAlignment(Qt.AlignCenter)
+        left_header.setStyleSheet("font-weight: bold; font-size: 14px;")
+        left_layout.addWidget(left_header)
+
+        self.folder_label = QLabel("Selected Folder: None")
+        self.folder_label.setAlignment(Qt.AlignCenter)
+        left_layout.addWidget(self.folder_label)
+
+        self.browse_folder_button = QPushButton("Browse Folder")
+        self.browse_folder_button.clicked.connect(self.select_folder)
+        left_layout.addWidget(self.browse_folder_button)
+
+        selection_layout.addLayout(left_layout)
+
+        # Right: File selection for applying settings
+        right_layout = QVBoxLayout()
+
+        right_header = QLabel("RIGHT: File Selection for Applying Settings")
+        right_header.setAlignment(Qt.AlignCenter)
+        right_header.setStyleSheet("font-weight: bold; font-size: 14px;")
+        right_layout.addWidget(right_header)
+
+        self.file_label = QLabel("Selected File: None")
+        self.file_label.setAlignment(Qt.AlignCenter)
+        right_layout.addWidget(self.file_label)
+
+        self.browse_file_button = QPushButton("Browse File")
+        self.browse_file_button.clicked.connect(self.select_file)
+        right_layout.addWidget(self.browse_file_button)
+
+        selection_layout.addLayout(right_layout)
+
+        layout.addLayout(selection_layout)
+
+        # Unified Workflow Button
+        self.start_button = QPushButton("Start Full Workflow")
+        self.start_button.setStyleSheet("font-weight: bold; font-size: 14px; padding: 10px;")
+        self.start_button.clicked.connect(self.start_full_workflow)
+        layout.addWidget(self.start_button)
+
+        # Create a container widget and set it as the central widget
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+        # Add a status bar for feedback
+        self.statusBar().showMessage("Ready")
+
+    def select_folder(self):
+        """Handles folder selection."""
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
+        if folder:
+            self.folder_label.setText(f"Selected Folder: {folder}")
+            self.selected_folder = folder
+        else:
+            self.statusBar().showMessage("No folder selected.")
+
+    def select_file(self):
+        """Handles file selection."""
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select File to Apply Settings", filter="JSON Files (*.json)")
+        if file_path:
+            self.file_label.setText(f"Selected File: {file_path}")
+            self.selected_file = file_path
+        else:
+            self.statusBar().showMessage("No file selected.")
+
+    def process_folder(self):
+        """Processes the folder by converting, merging, deduplicating, and renumbering."""
+        if hasattr(self, "selected_folder"):
+            try:
+                # Step 1: Convert to UTF-8
+                convert_to_utf8(self.selected_folder)
+                self.statusBar().showMessage("Step 1: Converted all files to UTF-8.")
+
+                # Step 2: Merge all JSON files into the temporary file
+                merge_all_settings_in_directory(self.selected_folder, TEMP_FILE)
+                self.statusBar().showMessage("Step 2: Merged all settings into a temporary file.")
+
+                # Step 3: Deduplicate settings
+                json_data = load_json(TEMP_FILE)
+                if json_data:
+                    deduplicate_settings(json_data)
+                    renumber_settings(json_data)
+                    save_json(TEMP_FILE, json_data)
+                    self.statusBar().showMessage("Step 3: Deduplicated and renumbered settings.")
+            except Exception as e:
+                self.statusBar().showMessage(f"Error during folder processing: {e}")
+        else:
+            self.statusBar().showMessage("Please select a folder first.")
+
+    def process_file(self):
+        """Processes the output file by applying merged settings and updating settings count."""
+        if hasattr(self, "selected_file"):
+            try:
+                # Step 1: Convert the output file to UTF-8
+                convert_to_utf8(os.path.dirname(self.selected_file))
+                self.statusBar().showMessage("Step 1: Converted output file to UTF-8.")
+
+                # Step 2: Apply merged settings
+                apply_merged_settings(self.selected_file, TEMP_FILE)
+                self.statusBar().showMessage("Step 2: Applied merged settings.")
+
+                # Step 3: Update settings count
+                json_data = load_json(self.selected_file)
+                if json_data:
+                    update_settings_count(json_data)
+                    save_json(self.selected_file, json_data)
+                    self.statusBar().showMessage("Step 3: Updated settings count in the output file.")
+            except Exception as e:
+                self.statusBar().showMessage(f"Error during file processing: {e}")
+        else:
+            self.statusBar().showMessage("Please select a file first.")
+
+    def start_full_workflow(self):
+        """Starts the full workflow: process folder and then process file."""
+        self.statusBar().showMessage("Starting full workflow...")
+        if hasattr(self, "selected_folder") and hasattr(self, "selected_file"):
+            self.process_folder()
+            self.process_file()
+            self.statusBar().showMessage("Full workflow completed.")
+        else:
+            self.statusBar().showMessage("Please select both a folder and a file before starting the workflow.")
+
+
+# Main Execution
 if __name__ == "__main__":
-    # Parse arguments
-    parser = argparse.ArgumentParser(description="Process JSON files in a directory.")
-    parser.add_argument("--directory", required=True, help="Directory containing JSON files.")
-    parser.add_argument("--output", required=True, help="Output file for merged and deduplicated settings.")
-    parser.add_argument("--update_file", required=True, help="File to update with final settings.")
-    args = parser.parse_args()
-
-    # Convert files to UTF-8
-    convert_to_utf8(args.directory)
-
-    # Merge all JSON files in the directory
-    merge_all_settings_in_directory(args.directory, args.output)
-
-    # Load merged JSON
-    json_data = load_json(args.output)
-
-    if json_data:
-        # Deduplicate settings
-        deduplicate_settings(json_data)
-
-        # Renumber settings
-        renumber_settings(json_data)
-
-        # Update settingsCount
-        update_settings_count(json_data)
-
-        # Save the deduplicated and renumbered JSON
-        save_json(args.output, json_data)
-
-        # Apply merged settings to the specified file
-        apply_merged_settings(args.update_file, args.output)
+    app = QApplication(sys.argv)
+    window = JSONProcessorApp()
+    window.show()
+    sys.exit(app.exec_())
