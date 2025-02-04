@@ -33,3 +33,6 @@ Click **"Start Full Workflow"**, and the application will perform the following 
 - If an error occurs, a message will be displayed in the **status bar**.
 - **Backup copies** of JSON files are automatically created before modification.
 
+### 5. Important Notes
+⚠️ **This tool is designed to work exclusively with Settings Catalog-based policies in Microsoft Intune.**  
+It does **not** support other policy types, such as Administrative Templates (ADMX), Custom OMA-URI, or Endpoint Security policies.
